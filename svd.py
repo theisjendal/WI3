@@ -14,12 +14,13 @@ max_epochs = 30
 stop_threshold = 0.005
 
 
-def get_triples(from_set):
+def get_triples(from_set, user_means, movie_means, mean_rating):
     triples = list()
 
     for user, movie_ratings in from_set.items():
         for movie, rating in movie_ratings.items():
-            triples.append((user, movie, rating))
+            # Subtract the user's mean rating, movie's mean rating and add overall mean rating
+            triples.append((user, movie, rating - user_means[user] - movie_means[movie] + mean_rating))
 
     return triples
 
@@ -45,8 +46,8 @@ def get_singular_vectors(n_movies, n_users):
     # m = np.matmul(A, B)
 
 
-def calculate_rmse(on_set, movie_values, user_values):
-    # Compute the rating matrix R
+def calculate_rmse(on_set, movie_values, user_values, user_means, movie_means, mean_rating):
+    # Compute the actual matrix R
     R = np.matmul(movie_values, user_values)
 
     n_instances = 0
@@ -54,10 +55,47 @@ def calculate_rmse(on_set, movie_values, user_values):
     for user, movie_rating in on_set.items():
         n_instances += len(movie_rating.keys())
 
-        for movie, rating in movie_rating.items():
-            sum_squared_errors += pow(R[movie][user] - rating, 2)
+        for movie, actual_rating in movie_rating.items():
+            # Get predicted actual
+            # We add back the structure we removed earlier (user means and movie means)
+            predicted_rating = R[movie][user] + user_means[user] + movie_means[movie] - mean_rating
+            residual = predicted_rating - actual_rating
+
+            sum_squared_errors += pow(residual, 2)
 
     return np.sqrt(sum_squared_errors / n_instances)
+
+
+def get_user_means(from_set):
+    user_means = dict()
+
+    for user, movie_ratings in from_set.items():
+        user_means[user] = np.mean(list(movie_ratings.values()))
+
+    return user_means
+
+
+def get_movie_means(from_set):
+    movie_rating_sum = dict()
+    movie_n_ratings = dict()
+
+    for user, movie_ratings in from_set.items():
+        for movie, rating in movie_ratings.items():
+            movie_n_ratings[movie] = movie_n_ratings.get(movie, 0) + 1
+            movie_rating_sum[movie] = movie_rating_sum.get(movie, 0) + rating
+
+    return {movie: r_sum / movie_n_ratings[movie] for movie, r_sum in movie_rating_sum.items()}
+
+
+def get_average_rating(from_set):
+    rating_sum = 0
+    n_ratings = 0
+
+    for user, movie_ratings in from_set.items():
+        rating_sum += sum(rating for rating in list(movie_ratings.values()))
+        n_ratings += len(movie_ratings)
+
+    return rating_sum / n_ratings
 
 
 def run(train):
@@ -67,8 +105,16 @@ def run(train):
     movies = get_movies(train)
     movie_values, user_values = get_singular_vectors(max(movies) + 1, max(train.keys()) + 1)
 
+    # Get mean ratings for movies and users, used for pre-processing
+    # For every rating, we subtract the average of its user's ratings and average of its movie's rating
+    # However, we add the mean rating in the entire system
+    # This should give our optimisation a head start by removing some obvious structure
+    user_means = get_user_means(train)
+    movie_means = get_movie_means(train)
+    mean_rating = get_average_rating(train)
+
     # Training instances are represented as a list of triples
-    triples = get_triples(train)
+    triples = get_triples(train, user_means, movie_means, mean_rating)
     last_rmse = None
 
     for epoch in range(max_epochs):
@@ -78,7 +124,7 @@ def run(train):
 
         # Calculate RMSE for training set
         # Stop if change is below threshold
-        rmse = calculate_rmse(train, movie_values, user_values)
+        rmse = calculate_rmse(train, movie_values, user_values, user_means, movie_means, mean_rating)
         if last_rmse and abs(rmse - last_rmse) < stop_threshold:
             break
         last_rmse = rmse
@@ -102,7 +148,7 @@ def run(train):
                 # Large user values are penalized using regularization
                 user_values[k][user] += learning_rate * (gradient - regularizer * user_values[k][user])
 
-    return movie_values, user_values
+    return movie_values, user_values, user_means, movie_means, mean_rating
 
 
 def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
@@ -118,8 +164,8 @@ def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
             train = train_folds[i]
             test = test_folds[i]
 
-            movie_values, user_values = run(train)
-            rmse_results.append(calculate_rmse(test, movie_values, user_values))
+            movie_values, user_values, user_means, movie_means, mean_rating = run(train)
+            rmse_results.append(calculate_rmse(test, movie_values, user_values, user_means, movie_means, mean_rating))
 
         logger.info(f'Finished test for {factor} latent factors, test RMSE values: {rmse_results}')
         logger.info(f'Average test RMSE: {np.mean(rmse_results)}')
