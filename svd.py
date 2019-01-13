@@ -11,7 +11,7 @@ n_latent_factors = 20
 learning_rate = 0.01
 regularizer = 0.05
 max_epochs = 30
-stop_threshold = 0.001
+stop_threshold = 0.005
 
 
 def get_triples(from_set):
@@ -86,21 +86,36 @@ def run(train):
         logger.info(f'Epoch {epoch}, RMSE: {rmse}')
 
         for user, movie, rating in triples:
+            movie_update = dict()
+            user_update = dict()
+
             # Update values in vector movie_values
             for k in range(n_latent_factors):
                 t_sum = sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
+
+                # Compute the gradient
                 gradient = (rating - t_sum) * user_values[k][user]
+
                 # Update the movie's kth factor with respect to the gradient and learning rate
                 # Large movie values are penalized using regularization
-                movie_values[movie][k] += learning_rate * (gradient - regularizer * movie_values[movie][k])
+                movie_update[k] = learning_rate * (gradient - regularizer * movie_values[movie][k])
 
             # Update values in vector user_values
             for k in range(n_latent_factors):
                 t_sum = sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
+
+                # Compute the gradient
                 gradient = (rating - t_sum) * movie_values[movie][k]
+
                 # Update the user's kth factor with respect to the gradient and learning rate
                 # Large user values are penalized using regularization
-                user_values[k][user] += learning_rate * (gradient - regularizer * user_values[k][user])
+                user_update[k] = learning_rate * (gradient - regularizer * user_values[k][user])
+
+            # Update values at the end of the iteration
+            # This way, the gradient of a single weight does not depend on changes in the same iteration
+            for k in range(n_latent_factors):
+                movie_values[movie][k] += movie_update[k]
+                user_values[k][user] += user_update[k]
 
     return movie_values, user_values
 
@@ -126,5 +141,5 @@ def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
 
 
 if __name__ == "__main__":
-    test_latent_factors([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 40, 45, 50], *load_all_folds(), n_folds=2)
+    test_latent_factors([10, 15, 20, 25, 30, 40, 45, 50], *load_all_folds(), n_folds=2)
     # run(*load_fold(1))
