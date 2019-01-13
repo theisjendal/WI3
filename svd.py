@@ -8,10 +8,10 @@ from load_data import load_all_folds
 # n20~1.12
 
 n_latent_factors = 20
-learning_rate = 0.001
-regularizer = 0.02
+learning_rate = 0.01
+regularizer = 0.05
 max_epochs = 30
-stop_threshold = 0.005
+stop_threshold = 0.001
 
 
 def get_triples(from_set):
@@ -126,5 +126,5 @@ def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
 
 
 if __name__ == "__main__":
-    test_latent_factors([10, 15, 20, 25, 30, 40, 45, 50], *load_all_folds(), n_folds=2)
+    test_latent_factors([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 40, 45, 50], *load_all_folds(), n_folds=2)
     # run(*load_fold(1))

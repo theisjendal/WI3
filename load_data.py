@@ -1,3 +1,6 @@
+from loguru import logger
+
+
 def load_all_folds():
     train, test = ([] for _ in range(2))
 
@@ -34,5 +37,18 @@ def load_fold(fold=1):
 
     load(path_base, train)
     load(path_test, test)
+
+    # Check for overlaps in train and test set
+    for train_user, train_user_rating in train.items():
+        test_user_ratings = test.get(train_user, None)
+        if not test_user_ratings:
+            continue
+
+        train_user_movies = set(train_user_rating.keys())
+        test_user_movies = set(test_user_ratings.keys())
+        overlap = train_user_movies.intersection(test_user_movies)
+
+        if overlap:
+            logger.warning(f'User {train_user} has intersecting movies')
 
     return train, test
