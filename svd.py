@@ -9,7 +9,7 @@ from load_data import load_all_folds
 
 n_latent_factors = 20
 learning_rate = 0.01
-regularizer = 0.05
+regularizer = 0.02
 max_epochs = 100
 stop_threshold = 0.005
 
@@ -89,12 +89,13 @@ def run(train):
             movie_update = dict()
             user_update = dict()
 
+            # Compute error to be used when calculating gradient
+            error = rating - sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
+
             # Update values in vector movie_values
             for k in range(n_latent_factors):
-                t_sum = sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
-
                 # Compute the gradient
-                gradient = (rating - t_sum) * user_values[k][user]
+                gradient = error * user_values[k][user]
 
                 # Update the movie's kth factor with respect to the gradient and learning rate
                 # Large movie values are penalized using regularization
@@ -102,10 +103,8 @@ def run(train):
 
             # Update values in vector user_values
             for k in range(n_latent_factors):
-                t_sum = sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
-
                 # Compute the gradient
-                gradient = (rating - t_sum) * movie_values[movie][k]
+                gradient = error * movie_values[movie][k]
 
                 # Update the user's kth factor with respect to the gradient and learning rate
                 # Large user values are penalized using regularization
@@ -141,5 +140,5 @@ def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
 
 
 if __name__ == "__main__":
-    test_latent_factors([30, 40, 45, 50], *load_all_folds(), n_folds=2)
+    test_latent_factors([1, 2, 3, 4, 5, 10, 30, 40, 45, 50], *load_all_folds(), n_folds=2)
     # run(*load_fold(1))
