@@ -20,15 +20,19 @@ are not representative
 ## Extending to hybrid content-based system
 - Combining the ratings of CF and CB might introduce some novel recommendations, that are not produced by
 our current implementation
-- The use of CF might also be good for never items
+- The use of CF might also be good for newer items
 
 ## Conclusions
 - Stemming and dimensionality reduction is important, we started with out reducing, and had an algorithm that ran
 for a very long time. Reducing this decreased runtime significantly. 
 
 ## Examples from data
-- We ran the algorithm on a user who had made some reviews on leather straps. The recommended items also included some
-other leather straps
+- We ran the algorithm on a user who had made some positive reviews on a microphone windscreen and guitar strings. These were the top-5 recommended items:
+1. Bluecell Black 5 Pack Microphone Windscreen Foam Cover
+2. Bluecell 5 Pack Blue/Green/Yellow/Hot Pink/Orange Handheld Stage Microphone Windscreen Foam Cover
+3. Ernie Ball Earthwood Extra Light Phosphor Bronze Acoustic String Set
+4. D'Addario EXL115W Nickel Wound Electric Guitar Strings, Medium/Blues-Jazz Rock, Wound 3rd, 11-49
+5. Planet Waves Ergonomic Guitar Peg Winder
 
 # Matrix factorization
 ## Pre-processing
