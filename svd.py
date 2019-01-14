@@ -1,3 +1,4 @@
+import pickle
 import random
 
 import numpy as np
@@ -9,7 +10,7 @@ from load_data import load_all_folds
 
 n_latent_factors = 20
 learning_rate = 0.01
-regularizer = 0.02
+regularizer = 0.07
 max_epochs = 100
 stop_threshold = 0.005
 
@@ -89,43 +90,36 @@ def run(train):
             movie_update = dict()
             user_update = dict()
 
-            # Compute error to be used when calculating gradient
-            error = rating - sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
-
             # Update values in vector movie_values
             for k in range(n_latent_factors):
-                # Compute the gradient
-                gradient = error * user_values[k][user]
+                error = rating - sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
+
+                # Compute the movie gradient
+                movie_gradient = error * user_values[k][user]
 
                 # Update the movie's kth factor with respect to the gradient and learning rate
                 # Large movie values are penalized using regularization
-                movie_update[k] = learning_rate * (gradient - regularizer * movie_values[movie][k])
+                movie_values[movie][k] += learning_rate * (movie_gradient - regularizer * movie_values[movie][k])
 
-            # Update values in vector user_values
-            for k in range(n_latent_factors):
-                # Compute the gradient
-                gradient = error * movie_values[movie][k]
+                # Compute the user gradient
+                user_gradient = error * movie_values[movie][k]
 
                 # Update the user's kth factor with respect to the gradient and learning rate
                 # Large user values are penalized using regularization
-                user_update[k] = learning_rate * (gradient - regularizer * user_values[k][user])
-
-            # Update values at the end of the iteration
-            # This way, the gradient of a single weight does not depend on changes in the same iteration
-            for k in range(n_latent_factors):
-                movie_values[movie][k] += movie_update[k]
-                user_values[k][user] += user_update[k]
+                user_values[k][user] += learning_rate * (user_gradient - regularizer * user_values[k][user])
 
     return movie_values, user_values
 
 
 def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
     n_folds = min(n_folds, len(train_folds), len(test_folds))
+    results = dict()
 
     for factor in factors:
         global n_latent_factors
         n_latent_factors = factor
-        rmse_results = []
+        test_rmse_results = []
+        train_rmse_results = []
 
         # Test for each fold
         for i in range(n_folds):
@@ -133,12 +127,21 @@ def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
             test = test_folds[i]
 
             movie_values, user_values = run(train)
-            rmse_results.append(calculate_rmse(test, movie_values, user_values))
+            train_rmse_results.append(calculate_rmse(train, movie_values, user_values))
+            test_rmse_results.append(calculate_rmse(test, movie_values, user_values))
 
-        logger.info(f'Finished test for {factor} latent factors, test RMSE values: {rmse_results}')
-        logger.info(f'Average test RMSE: {np.mean(rmse_results)}')
+        train_mean = np.mean(train_rmse_results)
+        test_mean = np.mean(test_rmse_results)
+
+        logger.info(f'Average test RMSE: {test_mean}')
+        logger.info(f'Average train RMSE: {train_mean}')
+
+        results[factor] = {'train': train_mean, 'test': test_mean}
+
+        # Dump results after every factor
+        pickle.dump(results, open('results.pkl', 'wb'))
 
 
 if __name__ == "__main__":
-    test_latent_factors([1, 2, 3, 4, 5, 10, 30, 40, 45, 50], *load_all_folds(), n_folds=2)
+    test_latent_factors([5, 10, 15, 20, 25, 5, 10, 30, 40, 45, 50], *load_all_folds(), n_folds=2)
     # run(*load_fold(1))
