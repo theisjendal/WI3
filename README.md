@@ -40,8 +40,10 @@ other leather straps
 in convergence. We tried higher learning rates, but while a local minimum was found faster, it had trouble converging
 - We tried to implement momentum, where we consider the previous weight update when updating a weight
 (`w=momentum*m-lr*g`), where `m` is the previous weight update
-   - This turned out to work really well!
-
+   - Convergence was faster, but it seemed to overfit more
+- We also played around with the regularization term in order to prevent overfitting
+   - Higher regularization values seemed to be good for out data
+ 
 ## Latent dimension size
 - We found that larger latent dimension sizes yielded better RMSE during training, but not necessarily during testing
 - This is indicative that the larger latent dimension sizes causes the model to overfit to the training data

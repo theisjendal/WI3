@@ -1,3 +1,4 @@
+import pickle
 import random
 
 import numpy as np
@@ -11,7 +12,7 @@ n_latent_factors = 20
 learning_rate = 0.01
 regularizer = 0.05
 max_epochs = 100
-stop_threshold = 0.005
+stop_threshold = 0.001
 
 
 def get_triples(from_set):
@@ -122,11 +123,13 @@ def run(train):
 
 def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
     n_folds = min(n_folds, len(train_folds), len(test_folds))
+    results = dict()
 
     for factor in factors:
         global n_latent_factors
         n_latent_factors = factor
-        rmse_results = []
+        test_rmse_results = []
+        train_rmse_results = []
 
         # Test for each fold
         for i in range(n_folds):
@@ -134,12 +137,21 @@ def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
             test = test_folds[i]
 
             movie_values, user_values = run(train)
-            rmse_results.append(calculate_rmse(test, movie_values, user_values))
+            train_rmse_results.append(calculate_rmse(train, movie_values, user_values))
+            test_rmse_results.append(calculate_rmse(test, movie_values, user_values))
 
-        logger.info(f'Finished test for {factor} latent factors, test RMSE values: {rmse_results}')
-        logger.info(f'Average test RMSE: {np.mean(rmse_results)}')
+        train_mean = np.mean(train_rmse_results)
+        test_mean = np.mean(test_rmse_results)
+
+        logger.info(f'Average test RMSE: {test_mean}')
+        logger.info(f'Average train RMSE: {train_mean}')
+
+        results[factor] = {'train': train_mean, 'test': test_mean}
+
+        # Dump results after every factor
+        pickle.dump(results, open('results.pkl', 'wb'))
 
 
 if __name__ == "__main__":
-    test_latent_factors([30, 40, 45, 50], *load_all_folds(), n_folds=2)
+    test_latent_factors([5, 10, 15, 20, 30, 35, 40, 45, 50], *load_all_folds(), n_folds=3)
     # run(*load_fold(1))
