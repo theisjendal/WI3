@@ -34,10 +34,10 @@ class TermDictionary:
 
         logger.debug('Pre-computed idf values')
 
-        # Consider only top-100 terms by term frequency
+        # Consider only top-500 terms by term frequency
         term_frequencies = [(term, sum(list(self._internal_dict[term].values()))) for term in self._internal_dict]
         top_terms = sorted(term_frequencies, key=lambda tup: tup[1], reverse=True)
-        self._top_terms = [tup[0] for tup in top_terms[:200]]
+        self._top_terms = [tup[0] for tup in top_terms[:500]]
 
         # Pre-compute vector lengths for all products
         for product, review in self._product_reviews.items():
@@ -106,13 +106,14 @@ def get_user_profile(product_reviews, reviewer_id):
     return product_ratings
 
 
-def knn(user_profile, product_reviews, term_dict, k=5):
+def knn(user_profile, product_reviews, term_dict, k=3):
     if not user_profile:
         logger.error('Invalid user profile specified')
 
         return
 
     unseen_products = set(product_reviews).difference(set(user_profile))
+    predicted_ratings = dict()
 
     for product in unseen_products:
         # Construct list of pairs from seen products to their similarity with the unseen product
@@ -128,7 +129,14 @@ def knn(user_profile, product_reviews, term_dict, k=5):
         # To get the predicted rating, divide by the sum of absolute weights
         predicted_rating = weighted_sum / sum(abs(tup[1]) for tup in product_weights)
 
-        logger.info(f'Predicted rating of {product}: {predicted_rating}')
+        # Save this product's predicted rating (to be sorted later)
+        predicted_ratings[product] = predicted_rating
+        #logger.info(f'Predicted rating of {product}: {predicted_rating}')
+
+    # Return top-5 recommended items
+    sorted_predictions = sorted(predicted_ratings.items(), key=lambda kv: kv[1], reverse=True)[:5]
+
+    return sorted_predictions
 
 
 def run():
@@ -146,8 +154,15 @@ def run():
     term_dict = TermDictionary(product_reviews)
     logger.debug('Created term dictionary')
 
-    user_profile = get_user_profile(reviews, 'A1TSKKBNV38E8Y')
-    knn(user_profile, product_reviews, term_dict)
+    # A user profile is generated as a dictionary from user's product reviews to the ratings
+    user_profile = get_user_profile(reviews, 'A3DOXGBWDJ1MU0')
+
+    # Finally, run the kNN algorithm on the user profile
+    predictions = knn(user_profile, product_reviews, term_dict)
+
+    # Print recommendations
+    for product, predicted in predictions:
+        logger.info(f'Predicted rating for {product}: {predicted}')
 
 
 if __name__ == "__main__":
