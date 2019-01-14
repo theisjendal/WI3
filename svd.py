@@ -5,11 +5,9 @@ from loguru import logger
 
 from load_data import load_all_folds
 
-# n20~1.12
-
 n_latent_factors = 20
-learning_rate = 0.001
-regularizer = 0.02
+learning_rate = 0.01
+regularizer = 0.03
 max_epochs = 30
 stop_threshold = 0.005
 
@@ -53,11 +51,17 @@ def calculate_rmse(on_set, movie_values, user_values, user_means, movie_means, m
     n_instances = 0
     sum_squared_errors = 0
     for user, movie_rating in on_set.items():
-        n_instances += len(movie_rating.keys())
+        n_instances += 0
 
         for movie, actual_rating in movie_rating.items():
-            # Get predicted actual
+            # Skip movies which we do not have means for
+            # Not sure why, but the test set h
+            if movie not in movie_means:
+                continue
+
+            # Get predicted rating
             # We add back the structure we removed earlier (user means and movie means)
+            n_instances += 1
             predicted_rating = R[movie][user] + user_means[user] + movie_means[movie] - mean_rating
             residual = predicted_rating - actual_rating
 
@@ -132,18 +136,18 @@ def run(train):
         logger.info(f'Epoch {epoch}, RMSE: {rmse}')
 
         for user, movie, rating in triples:
+            error = rating - sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
+
             # Update values in vector movie_values
             for k in range(n_latent_factors):
-                t_sum = sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
-                gradient = (rating - t_sum) * user_values[k][user]
+                gradient = error * user_values[k][user]
                 # Update the movie's kth factor with respect to the gradient and learning rate
                 # Large movie values are penalized using regularization
                 movie_values[movie][k] += learning_rate * (gradient - regularizer * movie_values[movie][k])
 
             # Update values in vector user_values
             for k in range(n_latent_factors):
-                t_sum = sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
-                gradient = (rating - t_sum) * movie_values[movie][k]
+                gradient = error * movie_values[movie][k]
                 # Update the user's kth factor with respect to the gradient and learning rate
                 # Large user values are penalized using regularization
                 user_values[k][user] += learning_rate * (gradient - regularizer * user_values[k][user])
