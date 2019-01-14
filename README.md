@@ -50,3 +50,6 @@ in convergence. We tried higher learning rates, but while a local minimum was fo
 - We found that larger latent dimension sizes yielded better RMSE during training, but not necessarily during testing
 - This is indicative that the larger latent dimension sizes causes the model to overfit to the training data
 - For this relatively small dataset (compared to Netflix), smaller latent dimension sizes seem to be needed
+
+## Train and test RMSE
+![Test/train RMSE](test-vs-train.png "Test/train RMSE")

@@ -10,7 +10,7 @@ from load_data import load_all_folds
 
 n_latent_factors = 20
 learning_rate = 0.01
-regularizer = 0.07
+regularizer = 0.02
 max_epochs = 100
 stop_threshold = 0.005
 
@@ -143,5 +143,5 @@ def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
 
 
 if __name__ == "__main__":
-    test_latent_factors([5, 10, 15, 20, 25, 5, 10, 30, 40, 45, 50], *load_all_folds(), n_folds=2)
+    test_latent_factors([5,  10, 15, 20, 25, 30, 35, 40], *load_all_folds(), n_folds=2)
     # run(*load_fold(1))
