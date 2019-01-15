@@ -87,9 +87,6 @@ def run(train):
         logger.info(f'Epoch {epoch}, RMSE: {rmse}')
 
         for user, movie, rating in triples:
-            movie_update = dict()
-            user_update = dict()
-
             # Update values in vector movie_values
             for k in range(n_latent_factors):
                 error = rating - sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
