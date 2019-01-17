@@ -6,8 +6,6 @@ from loguru import logger
 
 from load_data import load_all_folds
 
-# n20~1.12
-
 n_latent_factors = 20
 learning_rate = 0.01
 regularizer = 0.02
@@ -34,21 +32,16 @@ def get_movies(from_set):
     return movies
 
 
-def get_singular_vectors(n_movies, n_users):
-    """ Return the left and right singular vectors """
-    # Initialize singular value vectors
-    A = np.random.rand(n_movies, n_latent_factors)
-    B = np.random.rand(n_latent_factors, n_users)
+def initialize_latent_vectors(n_movies, n_users):
+    movie_values = np.random.rand(n_movies, n_latent_factors)
+    user_values = np.random.rand(n_latent_factors, n_users)
 
-    return A, B
-    # Matrix multiplication results in a rating matrix
-    # Should be size (movies, users)
-    # m = np.matmul(A, B)
+    return movie_values, user_values
 
 
 def calculate_rmse(on_set, movie_values, user_values):
-    # Compute the rating matrix R
-    R = np.matmul(movie_values, user_values)
+    # Compute the predicted rating matrix
+    predicted = np.matmul(movie_values, user_values)
 
     n_instances = 0
     sum_squared_errors = 0
@@ -56,17 +49,14 @@ def calculate_rmse(on_set, movie_values, user_values):
         n_instances += len(movie_rating.keys())
 
         for movie, rating in movie_rating.items():
-            sum_squared_errors += pow(R[movie][user] - rating, 2)
+            sum_squared_errors += (predicted[movie][user] - rating) ** 2
 
     return np.sqrt(sum_squared_errors / n_instances)
 
 
 def run(train):
-    logger.info(f'Running with latent factors: {n_latent_factors}')
-
-    # Construct the singular vectors
-    movies = get_movies(train)
-    movie_values, user_values = get_singular_vectors(max(movies) + 1, max(train.keys()) + 1)
+    movie_set = get_movies(train)
+    movie_values, user_values = initialize_latent_vectors(max(movie_set) + 1, max(train.keys()) + 1)
 
     # Training instances are represented as a list of triples
     triples = get_triples(train)
@@ -77,33 +67,26 @@ def run(train):
         # Shuffling may not be strictly necessary, but is an attempt to avoid overfitting
         random.shuffle(triples)
 
-        # Calculate RMSE for training set
-        # Stop if change is below threshold
+        # Calculate RMSE for training set, stop if change is below threshold
         rmse = calculate_rmse(train, movie_values, user_values)
+        logger.info(f'Epoch {epoch}, RMSE: {rmse}')
         if last_rmse and abs(rmse - last_rmse) < stop_threshold:
             break
         last_rmse = rmse
 
-        logger.info(f'Epoch {epoch}, RMSE: {rmse}')
-
         for user, movie, rating in triples:
-            # Update values in vector movie_values
             for k in range(n_latent_factors):
-                error = rating - sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
+                error = sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors)) - rating
 
                 # Compute the movie gradient
+                # Update the kth movie factor for the current movie
                 movie_gradient = error * user_values[k][user]
-
-                # Update the movie's kth factor with respect to the gradient and learning rate
-                # Large movie values are penalized using regularization
-                movie_values[movie][k] += learning_rate * (movie_gradient - regularizer * movie_values[movie][k])
+                movie_values[movie][k] += learning_rate * (-movie_gradient - regularizer * movie_values[movie][k])
 
                 # Compute the user gradient
+                # Update the kth user factor the the current user
                 user_gradient = error * movie_values[movie][k]
-
-                # Update the user's kth factor with respect to the gradient and learning rate
-                # Large user values are penalized using regularization
-                user_values[k][user] += learning_rate * (user_gradient - regularizer * user_values[k][user])
+                user_values[k][user] += learning_rate * (-user_gradient - regularizer * user_values[k][user])
 
     return movie_values, user_values
 
@@ -130,8 +113,9 @@ def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
         train_mean = np.mean(train_rmse_results)
         test_mean = np.mean(test_rmse_results)
 
-        logger.info(f'Average test RMSE: {test_mean}')
-        logger.info(f'Average train RMSE: {train_mean}')
+        logger.info(f'Finished testing for latent dimension size of {factor}')
+        logger.info(f'Mean test RMSE: {test_mean}')
+        logger.info(f'Mean train RMSE: {train_mean}')
 
         results[factor] = {'train': train_mean, 'test': test_mean}
 
@@ -141,4 +125,3 @@ def test_latent_factors(factors, train_folds, test_folds, n_folds=5):
 
 if __name__ == "__main__":
     test_latent_factors([5,  10, 15, 20, 25, 30, 35, 40], *load_all_folds(), n_folds=2)
-    # run(*load_fold(1))
