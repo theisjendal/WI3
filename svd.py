@@ -76,17 +76,17 @@ def run(train):
 
         for user, movie, rating in triples:
             for k in range(n_latent_factors):
-                error = sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors)) - rating
+                error = rating - sum(movie_values[movie][i] * user_values[i][user] for i in range(n_latent_factors))
 
                 # Compute the movie gradient
                 # Update the kth movie factor for the current movie
                 movie_gradient = error * user_values[k][user]
-                movie_values[movie][k] += learning_rate * (-movie_gradient - regularizer * movie_values[movie][k])
+                movie_values[movie][k] += learning_rate * (movie_gradient - regularizer * movie_values[movie][k])
 
                 # Compute the user gradient
                 # Update the kth user factor the the current user
                 user_gradient = error * movie_values[movie][k]
-                user_values[k][user] += learning_rate * (-user_gradient - regularizer * user_values[k][user])
+                user_values[k][user] += learning_rate * (user_gradient - regularizer * user_values[k][user])
 
     return movie_values, user_values
 
