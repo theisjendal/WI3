@@ -8,13 +8,13 @@ of products. It is therefore more memory and time efficient to use item-based
 - Item-based approaches offer great transparency. This means that a user can see why an item was recommended
 
 ## Drawbacks
-- Using item based it means, that it only chooses new items similar to already seen items and therefore
-relatively safe choices and not novel.
+- Using item based mean that it only chooses new items similar to already seen items and therefore
+relatively safe choices and not novel
 - If a user has only given items the same rating, then our system would give any unseen product that rating
 - Being a memory-based model, it can easily adapt to new products and users, unlike model-basel approaches. On the other
 hand, a model-based approach is much more efficient
 - The model cannot recommend before ratings of a product occur
-- As we use the most frequent used terms, making the matrix more dense we also risk that these terms,
+- As we use the most frequent used terms, making the matrix more dense we also risk that these terms
 are not representative 
 
 ## Extending to hybrid content-based system
@@ -24,7 +24,7 @@ our current implementation
 
 ## Conclusions
 - Stemming and dimensionality reduction is important, we started with out reducing, and had an algorithm that ran
-for a very long time. Reducing this decreased runtime significantly. 
+for a very long time. Reducing this decreased runtime significantly
 
 ## Examples from data
 - We ran the algorithm on a user who had made some positive reviews on a microphone windscreen and guitar strings. These were the top-5 recommended items:
